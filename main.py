@@ -66,7 +66,13 @@ def open_workbook():
 def get_token():
     # Load the .env file
     load_dotenv()
-    return os.getenv("GITHUB_TOKEN")
+    token = os.getenv("GITHUB_TOKEN")
+
+    if not isinstance(token, str):
+        print(f"Token value expected string, got {type(token)}")
+        exit(400)
+
+    return token
 
 
 def get_repositories():
