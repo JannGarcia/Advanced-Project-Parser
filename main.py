@@ -5,9 +5,12 @@ from enum import Enum
 
 import xlsxwriter
 
+# Custom wrapper class for the Github Repository
+from GithubData import GithubData
+
 ORGANAZATION_NAME = "UPRM-CIIC4010-F23"
 PROJECT_PREFIX = "pa0"
-FILE_NAME = PROJECT_PREFIX + "Distribution.xlsx"
+FILE_NAME = PROJECT_PREFIX + "-Distribution.xlsx"
 
 class GradingStatus(Enum):
     NOT_GRADED = "Not Graded"
@@ -49,7 +52,7 @@ def get_repositories():
     print("Entered Organization: " + organization.login)
 
     return [
-        repo for repo in organization.get_repos() 
+        GithubData(repo) for repo in organization.get_repos() 
         if repo.name.lower().startswith(PROJECT_PREFIX) 
         and repo.name.lower() != PROJECT_PREFIX
     ]
@@ -77,16 +80,16 @@ def main():
         GradingStatus.GRADED_EXCEPTIONAL: blue_format
     }
 
-    for i, repo in enumerate(repositories):
+    repositories = sorted(repositories, key=lambda repo: repo.get_member_count(), reverse=True)
+
+    for i, data in enumerate(repositories):
         # Grab the team name and member count
-        team = repo.get_teams()[0]
-        member_count = team.get_members().totalCount
-        worksheet.write('A%s' % (i+2), team.name)
-        worksheet.write('B%s' % (i+2), repo.html_url)
+        worksheet.write('A%s' % (i+2), data.get_team().name)
+        worksheet.write('B%s' % (i+2), data.get_repository().html_url)
 
         # Write a comment if the team does not have 2 members
-        if member_count != 2:
-            worksheet.write('G%s' % (i+2), "Member Count: %s" % member_count, workbook.add_format({'bg_color': '#E6B8B7'}))
+        if data.get_member_count() != 2:
+            worksheet.write('G%s' % (i+2), "Member Count: %s" % data.get_member_count(), workbook.add_format({'bg_color': '#E6B8B7'}))
 
         # By default, the grading status is not graded
         worksheet.write('F%s' % (i+2), GradingStatus.NOT_GRADED.value)
