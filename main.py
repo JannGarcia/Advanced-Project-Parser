@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 import os # Used to access the .env file
 
 import xlsxwriter
-import asyncio
 
 ORGANAZATION_NAME = "UPRM-CIIC4010-F23"
 PROJECT_PREFIX = "pa0"
