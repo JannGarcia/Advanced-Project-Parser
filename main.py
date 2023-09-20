@@ -4,7 +4,7 @@ import os # Used to access the .env file
 from enum import Enum
 
 import xlsxwriter
-
+from random import shuffle
 # Custom wrapper class for the Github Repository
 from GithubData import GithubData
 
@@ -82,6 +82,22 @@ def main():
 
     repositories = sorted(repositories, key=lambda repo: repo.get_member_count(), reverse=True)
 
+    # Find the index of the first repository with less than 2 members
+    reverse_index = 0
+    for i, data in enumerate(repositories):
+        if data.get_member_count() != 2:
+            break
+        reverse_index = i
+
+    # Shuffle from 0 to reverse_index, leaving the 1 member/0 member teams
+    # at the bottom.
+    # This is to avoid having the most recent submissions at the top
+    # and having another Christopher situation :)
+    first_half = repositories[:reverse_index]
+    shuffle(first_half)
+    repositories = first_half + repositories[reverse_index:]
+
+
     for i, data in enumerate(repositories):
         # Grab the team name and member count
         worksheet.write('A%s' % (i+2), data.get_team().name)
@@ -110,8 +126,7 @@ def main():
                                              'format': format
                                         })
 
-
-
+    # Autofit the column widths, and save the file
     worksheet.autofit()
     workbook.close()
 
