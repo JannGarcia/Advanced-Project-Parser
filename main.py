@@ -94,6 +94,26 @@ def login(token):
     return g
 
 
+def shuffle_until_no_two_members(repos):
+    repositories = sorted(repos, key=lambda repo: repo.get_member_count(), reverse=True)
+
+    # Find the index of the first repository with less than 2 members
+    reverse_index = 0
+    for i, data in enumerate(repositories):
+        reverse_index = i
+        if data.get_member_count() != 2:
+            break
+
+    # Shuffle from 0 to reverse_index, leaving the 1 member/0 member teams
+    # at the bottom.
+    # This is to avoid having the most recent submissions at the top
+    # and having another Christopher situation :)
+    first_half = repositories[:reverse_index]
+    shuffle(first_half)
+    repositories = first_half + repositories[reverse_index:]
+    return repositories
+
+
 def main():
     repositories = get_repositories()
     workbook, worksheet = open_workbook()
@@ -111,22 +131,8 @@ def main():
         GradingStatus.GRADED_EXCEPTIONAL: blue_format
     }
 
-    repositories = sorted(repositories, key=lambda repo: repo.get_member_count(), reverse=True)
-
-    # Find the index of the first repository with less than 2 members
-    reverse_index = 0
-    for i, data in enumerate(repositories):
-        reverse_index = i
-        if data.get_member_count() != 2:
-            break
-
-    # Shuffle from 0 to reverse_index, leaving the 1 member/0 member teams
-    # at the bottom.
-    # This is to avoid having the most recent submissions at the top
-    # and having another Christopher situation :)
-    first_half = repositories[:reverse_index]
-    shuffle(first_half)
-    repositories = first_half + repositories[reverse_index:]
+    # Shuffle all members who have 2 members
+    repositories = shuffle_until_no_two_members(repositories)
 
     for i, data in enumerate(repositories):
         # Grab the team name and member count
