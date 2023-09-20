@@ -22,5 +22,14 @@ def main():
     organization = g.get_organization(ORGANAZATION_NAME)
     print("Organization: " + organization.login)
 
+    repositories = [
+        repo for repo in organization.get_repos() 
+        if repo.name.lower().startswith(PROJECT_PREFIX) 
+        and repo.name.lower() != PROJECT_PREFIX
+    ]
+
+    for repo in repositories:
+        print(repo.name)
+
 if __name__ == "__main__":
     main()
