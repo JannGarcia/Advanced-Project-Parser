@@ -12,12 +12,35 @@ ORGANAZATION_NAME = "UPRM-CIIC4010-F23"
 PROJECT_PREFIX = "pa0"
 FILE_NAME = PROJECT_PREFIX + "-Distribution.xlsx"
 
+
+class ColumnName(Enum):
+    TEAM_NAME = "Team Name"
+    GITHUB_LINK = "Github Link"
+    MEMBER_1 = "Member 1"
+    MEMBER_2 = "Member 2"
+    TA = "TA"
+    GRADING_STATUS = "Grading Status"
+    COMMENT = "Comment"
+
 class GradingStatus(Enum):
     NOT_GRADED = "Not Graded"
     GRADED_POOR = "Graded (Poor)"
     GRADED_LATE = "Graded (Late)"
     GRADED = "Graded"
     GRADED_EXCEPTIONAL = "Graded (Exceptional)"
+
+column_name_to_index = {
+    ColumnName.TEAM_NAME: 'A',
+    ColumnName.GITHUB_LINK: 'B',
+    ColumnName.MEMBER_1: 'C',
+    ColumnName.MEMBER_2: 'D',
+    ColumnName.TA: 'E',
+    ColumnName.GRADING_STATUS: 'F',
+    ColumnName.COMMENT: 'G'
+}
+
+def get_cell_index(column_name, i):
+    return '%s%s' % (column_name_to_index[column_name], i)
 
 def open_workbook():
     workbook = xlsxwriter.Workbook(FILE_NAME)
@@ -29,14 +52,9 @@ def open_workbook():
     header_cell.set_align('center')
     header_cell.set_bg_color('#D3D3D3') # Light Gray
 
-    # Create the header row
-    worksheet.write('A1', 'Team Name', header_cell)
-    worksheet.write('B1', 'Github Link', header_cell)
-    worksheet.write('C1', 'Member 1', header_cell)
-    worksheet.write('D1', 'Member 2', header_cell)
-    worksheet.write('E1', 'TA', header_cell)
-    worksheet.write('F1', 'Grading Status', header_cell)
-    worksheet.write('G1', 'Comment', header_cell)
+    # Create the header rows
+    for column_name, column_index in column_name_to_index.items():
+        worksheet.write('%s1' % column_index, column_name.value, header_cell)
 
     return (workbook, worksheet)
 
@@ -85,9 +103,9 @@ def main():
     # Find the index of the first repository with less than 2 members
     reverse_index = 0
     for i, data in enumerate(repositories):
+        reverse_index = i
         if data.get_member_count() != 2:
             break
-        reverse_index = i
 
     # Shuffle from 0 to reverse_index, leaving the 1 member/0 member teams
     # at the bottom.
@@ -100,19 +118,33 @@ def main():
 
     for i, data in enumerate(repositories):
         # Grab the team name and member count
-        worksheet.write('A%s' % (i+2), data.get_team().name)
-        worksheet.write('B%s' % (i+2), data.get_repository().html_url)
+        worksheet.write(
+            get_cell_index(ColumnName.TEAM_NAME, (i+2)),
+            data.get_team().name
+        )
+
+        worksheet.write(
+            get_cell_index(ColumnName.GITHUB_LINK, (i+2)),
+            data.get_repository().html_url
+        )
 
         # Write a comment if the team does not have 2 members
         if data.get_member_count() != 2:
-            worksheet.write('G%s' % (i+2), "Member Count: %s" % data.get_member_count(), workbook.add_format({'bg_color': '#E6B8B7'}))
+            worksheet.write(
+                get_cell_index(ColumnName.COMMENT, (i+2)),
+                "Member Count: %s" % data.get_member_count(),
+                workbook.add_format({'bg_color': '#E6B8B7'})
+            )
 
         # By default, the grading status is not graded
-        worksheet.write('F%s' % (i+2), GradingStatus.NOT_GRADED.value)
+        worksheet.write(
+            get_cell_index(ColumnName.GRADING_STATUS, (i+2)),
+            GradingStatus.NOT_GRADED.value
+        )
 
         # Create a dropdown for the grading status
         worksheet.data_validation(
-            'F%s' % (i+2),
+            get_cell_index(ColumnName.GRADING_STATUS, (i+2)),
             {'validate': 'list', 'source': [status.value for status in GradingStatus]}
         )
 
