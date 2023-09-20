@@ -6,3 +6,5 @@
 
 # Generated files
 *.xlsx
+
+__pycache__
