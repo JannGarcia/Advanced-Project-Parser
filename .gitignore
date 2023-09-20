@@ -1,0 +1,8 @@
+# Environment Variables
+.env
+
+# Python Virtual Environment
+.venv
+
+# Generated files
+*.xlsx
