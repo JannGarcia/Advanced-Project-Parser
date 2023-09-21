@@ -70,6 +70,7 @@ def get_token():
 
     if not isinstance(token, str):
         print(f"Token value expected string, got {type(token)}")
+        print(f"Perhaps you have not loaded your env file?")
         exit(400)
 
     return token
