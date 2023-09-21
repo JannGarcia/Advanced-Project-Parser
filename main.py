@@ -83,11 +83,18 @@ def get_repositories():
 
     organization = g.get_organization(ORGANIZATION_NAME)
     print("Entered Organization: " + organization.login)
-
-    return [
+    repos = [
         GithubData(repo) for repo in organization.get_repos()
         if repo.name.lower().startswith(PROJECT_PREFIX) and repo.name.lower() != PROJECT_PREFIX
     ]
+
+    if not repos:
+        raise ValueError(
+            "No repositories found for this project.\n"
+            "Check your token's permissions to allow access."
+        )
+
+    return repos
 
 
 def login(token):
