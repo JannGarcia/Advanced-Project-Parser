@@ -1,3 +1,5 @@
+from math import floor, ceil
+
 from github import Github, Auth
 from dotenv import load_dotenv
 import os  # Used to access the .env file
@@ -134,6 +136,7 @@ def main():
 
     # Shuffle all members who have 2 members
     repositories = shuffle_until_no_two_members(repositories)
+    teams_with_less_than_two = 0
 
     for i, data in enumerate(repositories):
         # Grab the team name and member count
@@ -154,6 +157,7 @@ def main():
                 "Member Count: %s" % data.get_member_count(),
                 workbook.add_format({'bg_color': '#E6B8B7'})
             )
+            teams_with_less_than_two += 1
 
         # By default, the grading status is not graded
         worksheet.write(
@@ -175,6 +179,75 @@ def main():
                                              'criteria': '=$F$%d="%s"' % ((i + 2), status.value),
                                              'format': format
                                          })
+
+    # Assign TAs
+    instructors = {
+        "LAB_INSTRUCTORS": [
+            "Joel Alvarado",
+            "Jann Garcia",
+            "Juan Rivera",
+            "Jose Ortiz",
+            "Jose Cordero",
+            "Alanis Negroni"
+        ],
+        "GRADERS": [
+            "Robdiel Melendez",
+            "Fulano De Tal"
+        ]
+    }
+
+    # THIS LINE IS NOT REALLY NECESSARY BUT I WANT TO BE SUPER FAIR
+    # Shuffle the grader list so that the last grader isn't the same
+    # everytime when assigning the very last repository (only happens
+    # if the split of the graders is an odd number; e.g. 21 projects
+    # between 2 graders == 10 per grader and 1 leftover)
+    # This assumes the limit is 2 or 3 graders. Anything higher and
+    # the math falls apart, and I'm too lazy to fix those edge cases.
+    shuffle(instructors["GRADERS"])
+
+    # Calculate TA/GRADER split to 60/40 ratio respectively
+    valid_repos = len(repositories) - teams_with_less_than_two
+    ratio_lab, ratio_grader = 0.60, 0.40
+    projects_per_ta = valid_repos // len(instructors["LAB_INSTRUCTORS"])
+    non_grader_split = floor(ratio_lab * projects_per_ta)
+    leftover = valid_repos - non_grader_split * len(instructors["LAB_INSTRUCTORS"])
+    grader_split = leftover // len(instructors["GRADERS"])
+
+    # Iterate through every repo and every lab TA simultaneously
+    # and assign based on calculated split
+    repo_idx = 2
+    for ta in instructors["LAB_INSTRUCTORS"]:
+        count = non_grader_split
+        while count > 0:
+            worksheet.write(
+                get_cell_index(ColumnName.TA, repo_idx),
+                ta
+            )
+            count -= 1
+            repo_idx += 1
+
+    # Iterate through leftover repos and every grader TA simultaneously
+    # and assign based on calculated split
+    for ta in instructors["GRADERS"]:
+        count = grader_split
+        while count > 0:
+            worksheet.write(
+                get_cell_index(ColumnName.TA, repo_idx),
+                ta
+            )
+            if repo_idx == valid_repos:
+                break
+
+            count -= 1
+            repo_idx += 1
+
+    # Check if there is a last repo that's not assigned
+    # to a grader TA and randomly choose a TA to assign
+    if repo_idx <= valid_repos:
+        worksheet.write(
+            get_cell_index(ColumnName.TA, repo_idx+1),
+            instructors["GRADERS"][-1]
+        )
 
     # Autofit the column widths, and save the file
     worksheet.autofit()
