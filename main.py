@@ -197,12 +197,8 @@ def main():
     }
 
     # THIS LINE IS NOT REALLY NECESSARY BUT I WANT TO BE SUPER FAIR
-    # Shuffle the grader list so that the last grader isn't the same
-    # everytime when assigning the very last repository (only happens
-    # if the split of the graders is an odd number; e.g. 21 projects
-    # between 2 graders == 10 per grader and 1 leftover)
-    # This assumes the limit is 2 or 3 graders. Anything higher and
-    # the math falls apart, and I'm too lazy to fix those edge cases.
+    # Shuffle the grader list so that the first graders aren't the same
+    # everytime when assigning the very last repositories.
     shuffle(instructors["GRADERS"])
 
     # Calculate TA/GRADER split to 60/40 ratio respectively
@@ -226,28 +222,27 @@ def main():
             count -= 1
             repo_idx += 1
 
-    # Iterate through leftover repos and every grader TA simultaneously
-    # and assign based on calculated split
-    for ta in instructors["GRADERS"]:
-        count = grader_split
+    # Distribute leftover repos evenly among graders (some graders can have 1 more than others).
+    # So we just count 1 to each grader in order, and stop when we run out of repos to distribute.
+    dist_grader_count = {grader: 0 for grader in instructors["GRADERS"]}
+    grader_index = 0
+    i = 0
+    while i < leftover:
+        grader = instructors["GRADERS"][grader_index % len(instructors["GRADERS"])]
+        dist_grader_count[grader] += 1
+        grader_index += 1
+        i += 1
+
+    # Use counter to distribute grading in worksheet
+    for grader in instructors["GRADERS"]:
+        count = dist_grader_count[grader]
         while count > 0:
             worksheet.write(
                 get_cell_index(ColumnName.TA, repo_idx),
-                ta
+                grader
             )
-            if repo_idx == valid_repos:
-                break
-
             count -= 1
             repo_idx += 1
-
-    # Check if there is a last repo that's not assigned
-    # to a grader TA and randomly choose a TA to assign
-    if repo_idx <= valid_repos:
-        worksheet.write(
-            get_cell_index(ColumnName.TA, repo_idx+1),
-            instructors["GRADERS"][-1]
-        )
 
     # Autofit the column widths, and save the file
     worksheet.autofit()
