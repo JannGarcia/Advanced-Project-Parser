@@ -199,7 +199,7 @@ def main():
         ],
         "GRADERS": [
             "Robdiel Melendez",
-            "Fulano De Tal"
+            "Eithan Capella"
         ]
     }
 
