@@ -1,3 +1,5 @@
+from math import floor, ceil
+
 from github import Github, Auth
 from dotenv import load_dotenv
 import os  # Used to access the .env file
@@ -66,7 +68,14 @@ def open_workbook():
 def get_token():
     # Load the .env file
     load_dotenv()
-    return os.getenv("GITHUB_TOKEN")
+    token = os.getenv("GITHUB_TOKEN")
+
+    if not isinstance(token, str):
+        print(f"Token value expected string, got {type(token)}")
+        print(f"Perhaps you have not loaded your env file?")
+        exit(400)
+
+    return token
 
 
 def get_repositories():
@@ -74,11 +83,18 @@ def get_repositories():
 
     organization = g.get_organization(ORGANIZATION_NAME)
     print("Entered Organization: " + organization.login)
-
-    return [
+    repos = [
         GithubData(repo) for repo in organization.get_repos()
         if repo.name.lower().startswith(PROJECT_PREFIX) and repo.name.lower() != PROJECT_PREFIX
     ]
+
+    if not repos:
+        raise ValueError(
+            "No repositories found for this project.\n"
+            "Check your token's permissions to allow access."
+        )
+
+    return repos
 
 
 def login(token):
@@ -86,6 +102,26 @@ def login(token):
     g = Github(auth=auth)
     print("Successfully Logged in as: " + g.get_user().login)
     return g
+
+
+def shuffle_until_no_two_members(repos):
+    repositories = sorted(repos, key=lambda repo: repo.get_member_count(), reverse=True)
+
+    # Find the index of the first repository with less than 2 members
+    reverse_index = 0
+    for i, data in enumerate(repositories):
+        reverse_index = i
+        if data.get_member_count() != 2:
+            break
+
+    # Shuffle from 0 to reverse_index, leaving the 1 member/0 member teams
+    # at the bottom.
+    # This is to avoid having the most recent submissions at the top
+    # and having another Christopher situation :)
+    first_half = repositories[:reverse_index]
+    shuffle(first_half)
+    repositories = first_half + repositories[reverse_index:]
+    return repositories
 
 
 def main():
@@ -105,22 +141,9 @@ def main():
         GradingStatus.GRADED_EXCEPTIONAL: blue_format
     }
 
-    repositories = sorted(repositories, key=lambda repo: repo.get_member_count(), reverse=True)
-
-    # Find the index of the first repository with less than 2 members
-    reverse_index = 0
-    for i, data in enumerate(repositories):
-        reverse_index = i
-        if data.get_member_count() != 2:
-            break
-
-    # Shuffle from 0 to reverse_index, leaving the 1 member/0 member teams
-    # at the bottom.
-    # This is to avoid having the most recent submissions at the top
-    # and having another Christopher situation :)
-    first_half = repositories[:reverse_index]
-    shuffle(first_half)
-    repositories = first_half + repositories[reverse_index:]
+    # Shuffle all members who have 2 members
+    repositories = shuffle_until_no_two_members(repositories)
+    teams_with_less_than_two = 0
 
     for i, data in enumerate(repositories):
         # Grab the team name and member count
@@ -141,6 +164,7 @@ def main():
                 "Member Count: %s" % data.get_member_count(),
                 workbook.add_format({'bg_color': '#E6B8B7'})
             )
+            teams_with_less_than_two += 1
 
         # By default, the grading status is not graded
         worksheet.write(
@@ -162,6 +186,69 @@ def main():
                                              'criteria': '=$F$%d="%s"' % ((i + 2), status.value),
                                              'format': format
                                          })
+
+    # Assign TAs
+    instructors = {
+        "LAB_INSTRUCTORS": [
+            "Joel Alvarado",
+            "Jann Garcia",
+            "Juan Rivera",
+            "Jose Ortiz",
+            "Jose Cordero",
+            "Alanis Negroni"
+        ],
+        "GRADERS": [
+            "Robdiel Melendez",
+            "Fulano De Tal"
+        ]
+    }
+
+    # THIS LINE IS NOT REALLY NECESSARY BUT I WANT TO BE SUPER FAIR
+    # Shuffle the grader list so that the first graders aren't the same
+    # everytime when assigning the very last repositories.
+    shuffle(instructors["GRADERS"])
+
+    # Calculate TA/GRADER split to 60/40 ratio respectively
+    valid_repos = len(repositories) - teams_with_less_than_two
+    ratio_lab = 0.60
+    projects_per_ta = valid_repos // len(instructors["LAB_INSTRUCTORS"])
+    non_grader_split = floor(ratio_lab * projects_per_ta)
+    leftover = valid_repos - non_grader_split * len(instructors["LAB_INSTRUCTORS"])
+
+    # Iterate through every repo and every lab TA simultaneously
+    # and assign based on calculated split
+    repo_idx = 2
+    for ta in instructors["LAB_INSTRUCTORS"]:
+        count = non_grader_split
+        while count > 0:
+            worksheet.write(
+                get_cell_index(ColumnName.TA, repo_idx),
+                ta
+            )
+            count -= 1
+            repo_idx += 1
+
+    # Distribute leftover repos evenly among graders (some graders can have 1 more than others).
+    # So we just count 1 to each grader in order, and stop when we run out of repos to distribute.
+    dist_grader_count = {grader: 0 for grader in instructors["GRADERS"]}
+    grader_index = 0
+    i = 0
+    while i < leftover:
+        grader = instructors["GRADERS"][grader_index % len(instructors["GRADERS"])]
+        dist_grader_count[grader] += 1
+        grader_index += 1
+        i += 1
+
+    # Use counter to distribute grading in worksheet
+    for grader in instructors["GRADERS"]:
+        count = dist_grader_count[grader]
+        while count > 0:
+            worksheet.write(
+                get_cell_index(ColumnName.TA, repo_idx),
+                grader
+            )
+            count -= 1
+            repo_idx += 1
 
     # Autofit the column widths, and save the file
     worksheet.autofit()
