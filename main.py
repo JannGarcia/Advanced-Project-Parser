@@ -210,11 +210,10 @@ def main():
 
     # Calculate TA/GRADER split to 60/40 ratio respectively
     valid_repos = len(repositories) - teams_with_less_than_two
-    ratio_lab, ratio_grader = 0.60, 0.40
+    ratio_lab = 0.60
     projects_per_ta = valid_repos // len(instructors["LAB_INSTRUCTORS"])
     non_grader_split = floor(ratio_lab * projects_per_ta)
     leftover = valid_repos - non_grader_split * len(instructors["LAB_INSTRUCTORS"])
-    grader_split = leftover // len(instructors["GRADERS"])
 
     # Iterate through every repo and every lab TA simultaneously
     # and assign based on calculated split
