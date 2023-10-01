@@ -4,7 +4,7 @@ from github import Github, Auth
 from dotenv import load_dotenv
 import os  # Used to access the .env file
 from enum import Enum
-
+import requests as req
 import xlsxwriter
 from random import shuffle
 # Custom wrapper class for the GitHub Repository
@@ -65,10 +65,9 @@ def open_workbook():
     return workbook, worksheet
 
 
-def get_token():
-    # Load the .env file
+def load_stuff(env_variable):
     load_dotenv()
-    token = os.getenv("GITHUB_TOKEN")
+    token = os.getenv(env_variable)
 
     if not isinstance(token, str):
         print(f"Token value expected string, got {type(token)}")
@@ -78,31 +77,44 @@ def get_token():
     return token
 
 
+def get_token():
+    return load_stuff("GITHUB_TOKEN")
+
+def get_instructors() -> list[str]:
+    return load_stuff("LAB_INSTRUCTORS").split(",")
+
+def get_graders() -> list[str]:
+    return load_stuff("GRADERS").split(",")
+
 def get_repositories():
-    g = login(get_token())
+    g = get_token()
+    # Check Credentials
+    headers = {"Authorization": "token " + g }
+    url = "https://api.github.com/" + ORGANIZATION_NAME
+    response = req.get(url=url, headers=headers)
+    if response.ok:
+        gg = login(g)
+        organization = gg.get_organization(ORGANIZATION_NAME)
+        print("Entered Organization: " + organization.login)
+        repos = [
+            GithubData(repo) for repo in organization.get_repos()
+            if repo.name.lower().startswith(PROJECT_PREFIX) and repo.name.lower() != PROJECT_PREFIX
+        ]
 
-    organization = g.get_organization(ORGANIZATION_NAME)
-    print("Entered Organization: " + organization.login)
-    repos = [
-        GithubData(repo) for repo in organization.get_repos()
-        if repo.name.lower().startswith(PROJECT_PREFIX) and repo.name.lower() != PROJECT_PREFIX
-    ]
-
-    if not repos:
-        raise ValueError(
-            "No repositories found for this project.\n"
-            "Check your token's permissions to allow access."
-        )
-
-    return repos
-
+        if not repos:
+            raise ValueError(
+                "No repositories found for this project.\n"
+                "Check your token's permissions to allow access."
+            )
+        return repos
+    print("Bad Credentials, please verify the GITHUB_TOKEN")
+    exit(1)
 
 def login(token):
     auth = Auth.Token(token)
     g = Github(auth=auth)
     print("Successfully Logged in as: " + g.get_user().login)
     return g
-
 
 def shuffle_until_no_two_members(repos):
     repositories = sorted(repos, key=lambda repo: repo.get_member_count(), reverse=True)
@@ -122,7 +134,6 @@ def shuffle_until_no_two_members(repos):
     shuffle(first_half)
     repositories = first_half + repositories[reverse_index:]
     return repositories
-
 
 def main():
     repositories = get_repositories()
@@ -189,18 +200,8 @@ def main():
 
     # Assign TAs
     instructors = {
-        "LAB_INSTRUCTORS": [
-            "Joel Alvarado",
-            "Jann Garcia",
-            "Juan Rivera",
-            "Jose Ortiz",
-            "Jose Cordero",
-            "Alanis Negroni"
-        ],
-        "GRADERS": [
-            "Robdiel Melendez",
-            "Eithan Capella"
-        ]
+        "LAB_INSTRUCTORS": get_instructors(),
+        "GRADERS": get_graders()
     }
 
     # THIS LINE IS NOT REALLY NECESSARY BUT I WANT TO BE SUPER FAIR
