@@ -10,8 +10,8 @@ from random import shuffle
 # Custom wrapper class for the GitHub Repository
 from GithubData import GithubData
 
-ORGANIZATION_NAME = "UPRM-CIIC4010-F23"
-PROJECT_PREFIX = "pa0"
+ORGANIZATION_NAME = "UPRM-CIIC4010-S23"
+PROJECT_PREFIX = "pa1"
 FILE_NAME = PROJECT_PREFIX + "-Distribution.xlsx"
 
 
@@ -90,15 +90,17 @@ def get_repositories():
     g = get_token()
     # Check Credentials
     headers = {"Authorization": "token " + g }
-    url = "https://api.github.com/" + ORGANIZATION_NAME
+    url = "https://api.github.com/orgs/" + ORGANIZATION_NAME
     response = req.get(url=url, headers=headers)
+    print(response)
+    print(url)
     if response.ok:
         gg = login(g)
         organization = gg.get_organization(ORGANIZATION_NAME)
         print("Entered Organization: " + organization.login)
         repos = [
             GithubData(repo) for repo in organization.get_repos()
-            if repo.name.lower().startswith(PROJECT_PREFIX) and repo.name.lower() != PROJECT_PREFIX
+            if PROJECT_PREFIX in repo.name.lower() and (repo.name.lower() != PROJECT_PREFIX or "test" in repo.name.lower())
         ]
 
         if not repos:
@@ -107,8 +109,9 @@ def get_repositories():
                 "Check your token's permissions to allow access."
             )
         return repos
-    print("Bad Credentials, please verify the GITHUB_TOKEN")
-    exit(1)
+    else:
+        print("Bad Credentials, please verify the GITHUB_TOKEN")
+        exit(1)
 
 def login(token):
     auth = Auth.Token(token)
