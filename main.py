@@ -1,10 +1,9 @@
-from math import floor, ceil
+from math import floor
 
-from github import Github, Auth
+from github import Github, Auth, GithubException
 from dotenv import load_dotenv
 import os  # Used to access the .env file
 from enum import Enum
-import requests as req
 import xlsxwriter
 from random import shuffle
 # Custom wrapper class for the GitHub Repository
@@ -44,7 +43,7 @@ column_name_to_index = {
 }
 
 
-def get_cell_index(column_name, i):
+def get_cell_index(column_name, i) -> str:
     return '%s%s' % (column_name_to_index[column_name], i)
 
 
@@ -65,7 +64,7 @@ def open_workbook():
     return workbook, worksheet
 
 
-def load_stuff(env_variable):
+def load_stuff(env_variable) -> str:
     load_dotenv()
     token = os.getenv(env_variable)
 
@@ -77,49 +76,60 @@ def load_stuff(env_variable):
     return token
 
 
-def get_token():
+def get_token() -> str:
+    """
+    Loads Token from .env file
+    """
     return load_stuff("GITHUB_TOKEN")
 
 def get_instructors() -> list[str]:
+    """
+    Loads a list of instructors in the .env file. Follows csv ',' convention
+    """
     return load_stuff("LAB_INSTRUCTORS").split(",")
 
 def get_graders() -> list[str]:
+    """
+    Loads a list of graders in the .env file. Follows csv ',' convention
+    """
     return load_stuff("GRADERS").split(",")
 
-def get_repositories():
-    g = get_token()
-    # Check Credentials
-    headers = {"Authorization": "token " + g }
-    url = "https://api.github.com/orgs/" + ORGANIZATION_NAME
-    response = req.get(url=url, headers=headers)
-    print(response)
-    print(url)
-    if response.ok:
-        gg = login(g)
-        organization = gg.get_organization(ORGANIZATION_NAME)
-        print("Entered Organization: " + organization.login)
+def get_repositories() -> list[GithubData]:
+    g = login(get_token())
+    organization = g.get_organization(ORGANIZATION_NAME)
+    print("Entered Organization: " + organization.login)
+    try:
         repos = [
             GithubData(repo) for repo in organization.get_repos()
-            if PROJECT_PREFIX in repo.name.lower() and (repo.name.lower() != PROJECT_PREFIX or "test" in repo.name.lower())
+            if PROJECT_PREFIX in repo.name.lower() and (repo.name.lower() != PROJECT_PREFIX or "test" in repo.name.lower() or "solution" in repo.name.lower())
         ]
+        # if not repos:
+        #     raise ValueError()
+    except GithubException as e:
+        print(            
+            "No repositories found for this project.\n" +
+            "Check your token's permissions to allow access.\n",
+            e)
+        exit(400)
+    return repos
 
-        if not repos:
-            raise ValueError(
-                "No repositories found for this project.\n"
-                "Check your token's permissions to allow access."
-            )
-        return repos
-    else:
-        print("Bad Credentials, please verify the GITHUB_TOKEN")
-        exit(1)
 
-def login(token):
+def login(token: str) -> Github:
+    """
+    Returns a verified Github object
+    """
     auth = Auth.Token(token)
     g = Github(auth=auth)
-    print("Successfully Logged in as: " + g.get_user().login)
+    try:
+        print("Authenticating User...")
+        print("Successfully Logged in as: " + g.get_user().login)
+    except  GithubException as e:
+        print("Error: ", e)
+        print("Please verify the GITHUB_TOKEN in your .env")
+        exit(1)
     return g
 
-def shuffle_until_no_two_members(repos):
+def shuffle_until_no_two_members(repos) -> list:
     repositories = sorted(repos, key=lambda repo: repo.get_member_count(), reverse=True)
 
     # Find the index of the first repository with less than 2 members
@@ -262,4 +272,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    get_repositories()
