@@ -1,17 +1,16 @@
-from math import floor, ceil
+from math import floor
 
-from github import Github, Auth
+from github import Github, Auth, GithubException
 from dotenv import load_dotenv
 import os  # Used to access the .env file
 from enum import Enum
-
 import xlsxwriter
 from random import shuffle
 # Custom wrapper class for the GitHub Repository
 from GithubData import GithubData
 
-ORGANIZATION_NAME = "UPRM-CIIC4010-F23"
-PROJECT_PREFIX = "pa0"
+ORGANIZATION_NAME = "UPRM-CIIC4010-S23"
+PROJECT_PREFIX = "pa1"
 FILE_NAME = PROJECT_PREFIX + "-Distribution.xlsx"
 
 
@@ -44,7 +43,7 @@ column_name_to_index = {
 }
 
 
-def get_cell_index(column_name, i):
+def get_cell_index(column_name, i) -> str:
     return '%s%s' % (column_name_to_index[column_name], i)
 
 
@@ -65,10 +64,9 @@ def open_workbook():
     return workbook, worksheet
 
 
-def get_token():
-    # Load the .env file
+def load_stuff(env_variable) -> str:
     load_dotenv()
-    token = os.getenv("GITHUB_TOKEN")
+    token = os.getenv(env_variable)
 
     if not isinstance(token, str):
         print(f"Token value expected string, got {type(token)}")
@@ -78,33 +76,60 @@ def get_token():
     return token
 
 
-def get_repositories():
-    g = login(get_token())
+def get_token() -> str:
+    """
+    Loads Token from .env file
+    """
+    return load_stuff("GITHUB_TOKEN")
 
+def get_instructors() -> list[str]:
+    """
+    Loads a list of instructors in the .env file. Follows csv ',' convention
+    """
+    return load_stuff("LAB_INSTRUCTORS").split(",")
+
+def get_graders() -> list[str]:
+    """
+    Loads a list of graders in the .env file. Follows csv ',' convention
+    """
+    return load_stuff("GRADERS").split(",")
+
+def get_repositories() -> list[GithubData]:
+    g = login(get_token())
     organization = g.get_organization(ORGANIZATION_NAME)
     print("Entered Organization: " + organization.login)
-    repos = [
-        GithubData(repo) for repo in organization.get_repos()
-        if repo.name.lower().startswith(PROJECT_PREFIX) and repo.name.lower() != PROJECT_PREFIX
-    ]
-
-    if not repos:
-        raise ValueError(
-            "No repositories found for this project.\n"
-            "Check your token's permissions to allow access."
-        )
-
+    try:
+        repos = [
+            GithubData(repo) for repo in organization.get_repos()
+            if PROJECT_PREFIX in repo.name.lower() and (repo.name.lower() != PROJECT_PREFIX or "test" in repo.name.lower() or "solution" in repo.name.lower())
+        ]
+        # if not repos:
+        #     raise ValueError()
+    except GithubException as e:
+        print(            
+            "No repositories found for this project.\n" +
+            "Check your token's permissions to allow access.\n",
+            e)
+        exit(400)
     return repos
 
 
-def login(token):
+def login(token: str) -> Github:
+    """
+    Returns a verified Github object
+    """
     auth = Auth.Token(token)
     g = Github(auth=auth)
-    print("Successfully Logged in as: " + g.get_user().login)
+    try:
+        print("Authenticating User...")
+        print("Successfully Logged in as: " + g.get_user().login)
+    except  GithubException as e:
+        print("Error: ", e)
+        print("Please verify the GITHUB_TOKEN in your .env")
+        exit(1)
     return g
 
-
-def shuffle_until_no_two_members(repos):
+def shuffle_until_no_two_members(repos) -> list:
     repositories = sorted(repos, key=lambda repo: repo.get_member_count(), reverse=True)
 
     # Find the index of the first repository with less than 2 members
@@ -122,7 +147,6 @@ def shuffle_until_no_two_members(repos):
     shuffle(first_half)
     repositories = first_half + repositories[reverse_index:]
     return repositories
-
 
 def main():
     repositories = get_repositories()
@@ -189,18 +213,8 @@ def main():
 
     # Assign TAs
     instructors = {
-        "LAB_INSTRUCTORS": [
-            "Joel Alvarado",
-            "Jann Garcia",
-            "Juan Rivera",
-            "Jose Ortiz",
-            "Jose Cordero",
-            "Alanis Negroni"
-        ],
-        "GRADERS": [
-            "Robdiel Melendez",
-            "Eithan Capella"
-        ]
+        "LAB_INSTRUCTORS": get_instructors(),
+        "GRADERS": get_graders()
     }
 
     # THIS LINE IS NOT REALLY NECESSARY BUT I WANT TO BE SUPER FAIR
@@ -258,4 +272,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    get_repositories()

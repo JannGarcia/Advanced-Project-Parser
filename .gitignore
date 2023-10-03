@@ -3,6 +3,7 @@
 
 # Python Virtual Environment
 .venv
+venv
 
 # Generated files
 *.xlsx
