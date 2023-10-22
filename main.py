@@ -11,7 +11,7 @@ from random import shuffle
 from GithubData import GithubData
 
 ORGANIZATION_NAME = "UPRM-CIIC4010-F23"
-PROJECT_PREFIX = "pa0"
+PROJECT_PREFIX = "pa1"
 FILE_NAME = PROJECT_PREFIX + "-Distribution.xlsx"
 
 
@@ -27,10 +27,10 @@ class ColumnName(Enum):
 
 class GradingStatus(Enum):
     NOT_GRADED = "Not Graded"
-    GRADED_POOR = "Graded (Poor)"
+    GRADED_POOR = "Graded (<=50%)"
     GRADED_LATE = "Graded (Late)"
     GRADED = "Graded"
-    GRADED_EXCEPTIONAL = "Graded (Exceptional)"
+    GRADED_EXCEPTIONAL = "Graded (>=100%)"
 
 
 column_name_to_index = {
@@ -132,11 +132,12 @@ def main():
     red_format = workbook.add_format({'bg_color': '#F8CECC'})
     green_format = workbook.add_format({'bg_color': '#C6EFCE'})
     blue_format = workbook.add_format({'bg_color': '#BDD7EE'})
+    yellow_format = workbook.add_format({'bg_color': '#FFF2CC'})
 
     status_to_format = {
         # No grading by default is blank
         GradingStatus.GRADED_POOR: red_format,
-        GradingStatus.GRADED_LATE: green_format,
+        GradingStatus.GRADED_LATE: yellow_format,
         GradingStatus.GRADED: green_format,
         GradingStatus.GRADED_EXCEPTIONAL: blue_format
     }
