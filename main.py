@@ -11,7 +11,7 @@ from random import shuffle
 from GithubData import GithubData
 
 ORGANIZATION_NAME = "UPRM-CIIC4010-F23"
-PROJECT_PREFIX = "pa1"
+PROJECT_PREFIX = "pa2"
 FILE_NAME = PROJECT_PREFIX + "-Distribution.xlsx"
 
 
@@ -148,10 +148,16 @@ def main():
 
     for i, data in enumerate(repositories):
         # Grab the team name and member count
-        worksheet.write(
-            get_cell_index(ColumnName.TEAM_NAME, (i + 2)),
-            data.get_team().name
-        )
+        if not data.get_team():
+            worksheet.write(
+                get_cell_index(ColumnName.TEAM_NAME, (i + 2)),
+                "NO TEAM"
+            )
+        else:
+            worksheet.write(
+                get_cell_index(ColumnName.TEAM_NAME, (i + 2)),
+                data.get_team().name
+            )
 
         worksheet.write(
             get_cell_index(ColumnName.GITHUB_LINK, (i + 2)),

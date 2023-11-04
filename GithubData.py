@@ -1,8 +1,15 @@
 class GithubData():
     def __init__(self, repository):
         self.repository = repository
-        self.team = repository.get_teams()[0]
-        self.member_count = self.team.get_members().totalCount
+
+        teams = repository.get_teams()
+        if teams.totalCount > 0:
+            self.team = repository.get_teams()[0]
+            self.member_count = self.team.get_members().totalCount
+
+        else:
+            self.team = None
+            self.member_count = 0
 
     def get_repository(self):
         return self.repository
