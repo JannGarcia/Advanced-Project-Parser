@@ -10,8 +10,8 @@ from random import shuffle
 # Custom wrapper class for the GitHub Repository
 from GithubData import GithubData
 
-ORGANIZATION_NAME = "UPRM-CIIC4010-F23"
-PROJECT_PREFIX = "pa2"
+ORGANIZATION_NAME = "UPRM-CIIC4010-F24"
+PROJECT_PREFIX = "pa0"
 FILE_NAME = PROJECT_PREFIX + "-Distribution.xlsx"
 
 
@@ -197,16 +197,16 @@ def main():
     # Assign TAs
     instructors = {
         "LAB_INSTRUCTORS": [
-            "Joel Alvarado",
             "Jann Garcia",
-            "Juan Rivera",
             "Jose Ortiz",
             "Jose Cordero",
-            "Alanis Negroni"
+            "Robdiel Melendez",
+            "Jomard Concepcion",
+            "Misael Mercado",
         ],
         "GRADERS": [
-            "Robdiel Melendez",
-            "Eithan Capella"
+            "Eithan Capella",
+            "Christian Perez"
         ]
     }
 
@@ -218,44 +218,35 @@ def main():
     # Calculate TA/GRADER split to 60/40 ratio respectively
     valid_repos = len(repositories) - teams_with_less_than_two
     ratio_lab = 0.60
-    projects_per_ta = valid_repos // len(instructors["LAB_INSTRUCTORS"])
-    non_grader_split = floor(ratio_lab * projects_per_ta)
-    leftover = valid_repos - non_grader_split * len(instructors["LAB_INSTRUCTORS"])
 
-    # Iterate through every repo and every lab TA simultaneously
-    # and assign based on calculated split
+    # Number of projects per group
+    total_lab_projects = floor(ratio_lab * valid_repos)
+    total_grader_projects = valid_repos - total_lab_projects
+
+    # Projects per lab TA and grader
+    projects_per_ta = total_lab_projects // len(instructors["LAB_INSTRUCTORS"])
+
+    # Distribute projects to lab TAs
     repo_idx = 2
     for ta in instructors["LAB_INSTRUCTORS"]:
-        count = non_grader_split
-        while count > 0:
+        for _ in range(projects_per_ta):
             worksheet.write(
                 get_cell_index(ColumnName.TA, repo_idx),
                 ta
             )
-            count -= 1
             repo_idx += 1
 
-    # Distribute leftover repos evenly among graders (some graders can have 1 more than others).
-    # So we just count 1 to each grader in order, and stop when we run out of repos to distribute.
-    dist_grader_count = {grader: 0 for grader in instructors["GRADERS"]}
+    # Distribute remaining projects to graders in a round-robin fashion
     grader_index = 0
-    i = 0
-    while i < leftover:
+    for _ in range(total_grader_projects):
         grader = instructors["GRADERS"][grader_index % len(instructors["GRADERS"])]
-        dist_grader_count[grader] += 1
+        worksheet.write(
+            get_cell_index(ColumnName.TA, repo_idx),
+            grader
+        )
+        repo_idx += 1
         grader_index += 1
-        i += 1
 
-    # Use counter to distribute grading in worksheet
-    for grader in instructors["GRADERS"]:
-        count = dist_grader_count[grader]
-        while count > 0:
-            worksheet.write(
-                get_cell_index(ColumnName.TA, repo_idx),
-                grader
-            )
-            count -= 1
-            repo_idx += 1
 
     # Autofit the column widths, and save the file
     worksheet.autofit()
