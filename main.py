@@ -23,6 +23,7 @@ class ColumnName(Enum):
     TA = "TA"
     GRADING_STATUS = "Grading Status"
     COMMENT = "Comment"
+    RELEASE = "Release"
 
 
 class GradingStatus(Enum):
@@ -40,7 +41,8 @@ column_name_to_index = {
     ColumnName.MEMBER_2: 'D',
     ColumnName.TA: 'E',
     ColumnName.GRADING_STATUS: 'F',
-    ColumnName.COMMENT: 'G'
+    ColumnName.COMMENT: 'G',
+    ColumnName.RELEASE: 'H'
 }
 
 
@@ -168,10 +170,25 @@ def main():
         if data.get_member_count() != 2:
             worksheet.write(
                 get_cell_index(ColumnName.COMMENT, (i + 2)),
-                "Member Count: %s" % data.get_member_count(),
-                workbook.add_format({'bg_color': '#E6B8B7'})
+                "Member Count: %d" % data.get_member_count(),
+                workbook.add_format({'bg_color': '#E6B8B7', 'text_wrap': True}),
             )
             teams_with_less_than_two += 1
+
+        # Write a comment if the team does not have a release
+        if not data.has_release():
+            worksheet.write(
+                get_cell_index(ColumnName.RELEASE, (i + 2)),
+                "No Release Found",
+                workbook.add_format({'bg_color': '#E6B8B7'}),
+            )
+
+        else:
+            worksheet.write(
+                get_cell_index(ColumnName.RELEASE, (i + 2)),
+                "Release Found",
+                workbook.add_format({'bg_color': '#C6EFCE'}),
+            )
 
         # By default, the grading status is not graded
         worksheet.write(
@@ -238,7 +255,7 @@ def main():
 
     # Distribute remaining projects to graders in a round-robin fashion
     grader_index = 0
-    for _ in range(total_grader_projects):
+    while repo_idx <= valid_repos + 1:
         grader = instructors["GRADERS"][grader_index % len(instructors["GRADERS"])]
         worksheet.write(
             get_cell_index(ColumnName.TA, repo_idx),

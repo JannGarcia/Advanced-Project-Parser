@@ -19,4 +19,7 @@ class GithubData():
     
     def get_member_count(self):
         return self.member_count
+
+    def has_release(self):
+        return self.repository.get_releases().totalCount > 0
     
