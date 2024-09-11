@@ -1,4 +1,4 @@
-class GithubData():
+class GithubData:
     def __init__(self, repository):
         self.repository = repository
 
@@ -13,13 +13,15 @@ class GithubData():
 
     def get_repository(self):
         return self.repository
-    
+
     def get_team(self):
         return self.team
-    
+
     def get_member_count(self):
         return self.member_count
 
+    def get_url(self):
+        return self.repository.html_url
+
     def has_release(self):
         return self.repository.get_releases().totalCount > 0
-    
